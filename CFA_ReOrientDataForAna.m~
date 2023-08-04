@@ -1,0 +1,73 @@
+function CFA_ReOrientDataForAna
+answ = inputdlg('1:T1,2:T2,3:EPI,4:withT1,5:CT','which conditions?',1,{'1'});
+modality = str2num(answ{1});
+if modality==4
+    answ2 = inputdlg('1:T2,2:EPI,3:CT','which modality for OtherMode image',1,{'1'});
+    modother = str2num(answ2{1});
+end
+PG = uigetdir(pwd,'Need Reorient directory');
+
+% PGout = uigetdir(pwd,'Directory for data after reorient');
+sfold = dir(PG);
+[pth nam ext] = fileparts(fileparts([PG,filesep,sfold(3).name]));
+PGout = [pth,filesep,nam,'_ReOriented'];
+mkdir(PGout);
+errnum1 = 1;
+errnum2 = 1;
+for i = 1:length(sfold)-2
+    dirin = [PG,filesep,sfold(i+2).name,filesep];
+    fileROI = [dirin,'ROI.nii'];
+    fileimage = [dirin,'image.nii'];
+    fileT1 = [dirin,'T1.nii'];
+    fileOther = [dirin,'OtherMode.nii'];
+    if modality~=4
+        [vR dR] = Dynamic_read_dir_NIFTI(fileROI);
+        [vI dI] = Dynamic_read_dir_NIFTI(fileimage);
+        vRsize = [sqrt(sum(vR.mat(1:3,1).^2)),sqrt(sum(vR.mat(1:3,2).^2)),sqrt(sum(vR.mat(1:3,3).^2))];
+        vIsize = [sqrt(sum(vI.mat(1:3,1).^2)),sqrt(sum(vI.mat(1:3,2).^2)),sqrt(sum(vI.mat(1:3,3).^2))];
+        if vR.dim~=vI.dim
+            disp(['different dimensions for ROI and image: ',sfold(i+2).name]);
+        elseif round(vRsize*10000)~=round(vIsize*10000)
+            disp(['different voxelsize for ROI and image: ',sfold(i+2).name]);
+        else
+            mkdir([PGout,filesep,sfold(i+2).name])
+            copyfile(fileROI,[PGout,filesep,sfold(i+2).name,filesep,'ROI.nii']);
+            copyfile(fileimage,[PGout,filesep,sfold(i+2).name,filesep,'image.nii']);
+            clinical_setorigin(strvcat([PGout,filesep,sfold(i+2).name,filesep,'image.nii'],...
+                [PGout,filesep,sfold(i+2).name,filesep,'ROI.nii']), modality)
+        end
+    else
+        [vR dR] = Dynamic_read_dir_NIFTI(fileROI);
+        [vO dO] = Dynamic_read_dir_NIFTI(fileOther);
+        [vT dT] = Dynamic_read_dir_NIFTI(fileT1);
+        
+        vRsize = [sqrt(sum(vR.mat(1:3,1).^2)),sqrt(sum(vR.mat(1:3,2).^2)),sqrt(sum(vR.mat(1:3,3).^2))];
+        vOsize = [sqrt(sum(vO.mat(1:3,1).^2)),sqrt(sum(vO.mat(1:3,2).^2)),sqrt(sum(vO.mat(1:3,3).^2))];
+        if vR.dim~=vO.dim
+            disp(['different dimensions for ROI and image: ',sfold(i+2).name]);
+            errlist1{errnum1,1} = sfold(i+2).name;
+            errnum1 = errnum1+1;
+        elseif round(vRsize*10000)~=round(vOsize*10000)
+            disp(['different voxelsize for ROI and image: ',sfold(i+2).name]);
+            errlist2{errnum2,1} = sfold(i+2).name;
+            errnum2 = errnum2+1;
+        else
+            mkdir([PGout,filesep,sfold(i+2).name])
+            copyfile(fileROI,[PGout,filesep,sfold(i+2).name,filesep,'ROI.nii']);
+            copyfile(fileOther,[PGout,filesep,sfold(i+2).name,filesep,'OtherMode.nii']);
+            copyfile(fileT1,[PGout,filesep,sfold(i+2).name,filesep,'T1.nii']);
+            clinical_setorigin(strvcat([PGout,filesep,sfold(i+2).name,filesep,'OtherMode.nii'],...
+                [PGout,filesep,sfold(i+2).name,filesep,'ROI.nii']), modother)
+            clinical_setorigin([PGout,filesep,sfold(i+2).name,filesep,'T1.nii'],1)
+        end
+    end
+end
+if errnum1>1
+    for i = 1:length(errlist1)
+        
+        en
+end
+if errnum2>1
+    
+end
+end
